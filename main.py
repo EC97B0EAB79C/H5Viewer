@@ -4,12 +4,16 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import h5py
 import numpy as np
+import glob
+import os
 
 class H5MultiViewer(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("HDF5 Dataset Viewer")
         self.panes = []
+        self.h5_files = []
+        self.current_index = 0
 
         # ─── Top Controls ─────────────────────────────────────────────────────
         ctrl = ttk.Frame(self)
@@ -19,9 +23,11 @@ class H5MultiViewer(tk.Tk):
         self.file_entry.insert(0,"./data/{}.h5")
         self.file_entry.pack(side="left", padx=5)
         ttk.Label(ctrl, text="Time Step:").pack(side="left")
-        self.ts_var = tk.StringVar()
+        self.ts_var = tk.StringVar(value="0000100")
         ttk.Entry(ctrl, textvariable=self.ts_var, width=8).pack(side="left")
         ttk.Button(ctrl, text="Load", command=self.load_h5_file).pack(side="left", padx=5)
+        ttk.Button(ctrl, text="Prev", command=self.load_prev_file).pack(side="left", padx=2)
+        ttk.Button(ctrl, text="Next", command=self.load_next_file).pack(side="left", padx=2)
 
         # ─── 2×2 Panes ─────────────────────────────────────────────────────────
         main = ttk.Frame(self)
@@ -58,9 +64,35 @@ class H5MultiViewer(tk.Tk):
             f.visititems(visitor)
         return names
 
+    def get_h5_file_list(self):
+        pattern = self.file_entry.get().replace("{}", "*")
+        files = sorted(glob.glob(pattern))
+        return files
+
+    def get_ts_from_filename(self, filename):
+        # Extract timestep from filename using the pattern
+        pattern = self.file_entry.get()
+        prefix, suffix = pattern.split("{}", 1)
+        base = os.path.basename(filename)
+        if base.startswith(os.path.basename(prefix)) and base.endswith(suffix):
+            return base[len(os.path.basename(prefix)):-len(suffix) if suffix else None]
+        return ""
+
     def load_h5_file(self):
+        # Update file list and current index
+        self.h5_files = self.get_h5_file_list()
         ts = self.ts_var.get().zfill(7)
         fname = self.file_entry.get().format(ts)
+        if fname in self.h5_files:
+            self.current_index = self.h5_files.index(fname)
+        else:
+            self.current_index = 0
+            if self.h5_files:
+                fname = self.h5_files[0]
+                ts = self.get_ts_from_filename(fname)
+                self.ts_var.set(ts)
+            else:
+                fname = self.file_entry.get().format(ts)
         try:
             datasets = self.get_dataset_list(fname)
         except Exception as e:
@@ -83,6 +115,28 @@ class H5MultiViewer(tk.Tk):
                 self.redraw_pane(pane, fname, sel)
             else:
                 self.clear_pane(pane)
+
+    def load_prev_file(self):
+        if not self.h5_files:
+            self.h5_files = self.get_h5_file_list()
+        if not self.h5_files:
+            return
+        self.current_index = (self.current_index - 1) % len(self.h5_files)
+        fname = self.h5_files[self.current_index]
+        ts = self.get_ts_from_filename(fname)
+        self.ts_var.set(ts)
+        self.load_h5_file()
+
+    def load_next_file(self):
+        if not self.h5_files:
+            self.h5_files = self.get_h5_file_list()
+        if not self.h5_files:
+            return
+        self.current_index = (self.current_index + 1) % len(self.h5_files)
+        fname = self.h5_files[self.current_index]
+        ts = self.get_ts_from_filename(fname)
+        self.ts_var.set(ts)
+        self.load_h5_file()
 
     def on_select(self, event):
         pane = next(p for p in self.panes if p["combo"] is event.widget)
