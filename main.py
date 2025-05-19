@@ -7,6 +7,7 @@ import numpy as np
 import glob
 import os
 
+
 class H5MultiViewer(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -20,14 +21,20 @@ class H5MultiViewer(tk.Tk):
         ctrl.pack(fill="x", padx=5, pady=5)
         ttk.Label(ctrl, text="File Pattern:").pack(side="left")
         self.file_entry = ttk.Entry(ctrl, width=40)
-        self.file_entry.insert(0,"./data/{}.h5")
+        self.file_entry.insert(0, "./data/{}.h5")
         self.file_entry.pack(side="left", padx=5)
         ttk.Label(ctrl, text="Time Step:").pack(side="left")
         self.ts_var = tk.StringVar(value="0000100")
         ttk.Entry(ctrl, textvariable=self.ts_var, width=8).pack(side="left")
-        ttk.Button(ctrl, text="Load", command=self.load_h5_file).pack(side="left", padx=5)
-        ttk.Button(ctrl, text="Prev", command=self.load_prev_file).pack(side="left", padx=2)
-        ttk.Button(ctrl, text="Next", command=self.load_next_file).pack(side="left", padx=2)
+        ttk.Button(ctrl, text="Load", command=self.load_h5_file).pack(
+            side="left", padx=5
+        )
+        ttk.Button(ctrl, text="Prev", command=self.load_prev_file).pack(
+            side="left", padx=2
+        )
+        ttk.Button(ctrl, text="Next", command=self.load_next_file).pack(
+            side="left", padx=2
+        )
 
         # ─── 2×2 Panes ─────────────────────────────────────────────────────────
         main = ttk.Frame(self)
@@ -43,24 +50,23 @@ class H5MultiViewer(tk.Tk):
                 combo.pack(fill="x", padx=5, pady=5)
                 combo.bind("<<ComboboxSelected>>", self.on_select)
 
-                fig = Figure(figsize=(4,3))
+                fig = Figure(figsize=(4, 3))
                 ax = fig.add_subplot(111)
                 canvas = FigureCanvasTkAgg(fig, master=frame)
                 canvas.get_tk_widget().pack(fill="both", expand=True)
 
-                self.panes.append({
-                    "combo":   combo,
-                    "fig":     fig,
-                    "ax":      ax,
-                    "canvas":  canvas
-                })
+                self.panes.append(
+                    {"combo": combo, "fig": fig, "ax": ax, "canvas": canvas}
+                )
 
     def get_dataset_list(self, filename):
         names = []
         with h5py.File(filename, "r") as f:
+
             def visitor(name, obj):
                 if isinstance(obj, h5py.Dataset):
                     names.append(name)
+
             f.visititems(visitor)
         return names
 
@@ -75,7 +81,9 @@ class H5MultiViewer(tk.Tk):
         prefix, suffix = pattern.split("{}", 1)
         base = os.path.basename(filename)
         if base.startswith(os.path.basename(prefix)) and base.endswith(suffix):
-            return base[len(os.path.basename(prefix)):-len(suffix) if suffix else None]
+            return base[
+                len(os.path.basename(prefix)) : -len(suffix) if suffix else None
+            ]
         return ""
 
     def load_h5_file(self):
@@ -170,6 +178,7 @@ class H5MultiViewer(tk.Tk):
 
         pane["ax"] = ax
         pane["canvas"].draw()
+
 
 if __name__ == "__main__":
     H5MultiViewer().mainloop()
