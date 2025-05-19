@@ -20,13 +20,13 @@ def divide_1d_array(data, num_parts):
     return [data[i * part_size : (i + 1) * part_size] for i in range(num_parts)]
 
 
-def reshape_h5(h5_file):
+def reshape_h5(h5_file, shape):
     with h5py.File(h5_file, "r") as f:
         reshaped_data = {}
-        reshaped_data.update(reshape_convection(f))
-        reshaped_data.update(reshape_diffusion(f))
-        reshaped_data.update(reshape_bc1(f))
-        reshaped_data.update(reshape_rhs1(f))
+        reshaped_data.update(reshape_convection(f, shape))
+        reshaped_data.update(reshape_diffusion(f, shape))
+        reshaped_data.update(reshape_bc1(f, shape))
+        reshaped_data.update(reshape_rhs1(f, shape))
         reshaped_data.update(
             {
                 "extra/dP": f["extra/dP"][:],
@@ -44,53 +44,53 @@ def reshape_h5(h5_file):
                 out_f.create_dataset(key, data=value)
 
 
-def reshape_convection(f):
+def reshape_convection(f, shape):
     data = f["convection/0"][:]
     divided_data = divide_1d_array(data, 2)
     reshaped_data = {
-        "convection/0/0": convert_1d_to_2d(divided_data[0], (512, 511)),
-        "convection/0/1": convert_1d_to_2d(divided_data[1], (511, 512)),
+        "convection/0/0": convert_1d_to_2d(divided_data[0], (shape, shape - 1)),
+        "convection/0/1": convert_1d_to_2d(divided_data[1], (shape - 1, shape)),
     }
     data = f["convection/1"][:]
     divided_data = divide_1d_array(data, 2)
     reshaped_data.update(
         {
-            "convection/1/0": convert_1d_to_2d(divided_data[0], (512, 511)),
-            "convection/1/1": convert_1d_to_2d(divided_data[1], (511, 512)),
+            "convection/1/0": convert_1d_to_2d(divided_data[0], (shape, shape - 1)),
+            "convection/1/1": convert_1d_to_2d(divided_data[1], (shape - 1, shape)),
         }
     )
 
     return reshaped_data
 
 
-def reshape_diffusion(f):
+def reshape_diffusion(f, shape):
     data = f["diffusion/0"][:]
     divided_data = divide_1d_array(data, 2)
     reshaped_data = {
-        "diffusion/0/0": convert_1d_to_2d(divided_data[0], (512, 511)),
-        "diffusion/0/1": convert_1d_to_2d(divided_data[1], (511, 512)),
+        "diffusion/0/0": convert_1d_to_2d(divided_data[0], (shape, shape - 1)),
+        "diffusion/0/1": convert_1d_to_2d(divided_data[1], (shape - 1, shape)),
     }
 
     return reshaped_data
 
 
-def reshape_bc1(f):
+def reshape_bc1(f, shape):
     data = f["extra/bc1"][:]
     divided_data = divide_1d_array(data, 2)
     reshaped_data = {
-        "extra/bc1/0": convert_1d_to_2d(divided_data[0], (512, 511)),
-        "extra/bc1/1": convert_1d_to_2d(divided_data[1], (511, 512)),
+        "extra/bc1/0": convert_1d_to_2d(divided_data[0], (shape, shape - 1)),
+        "extra/bc1/1": convert_1d_to_2d(divided_data[1], (shape - 1, shape)),
     }
 
     return reshaped_data
 
 
-def reshape_rhs1(f):
+def reshape_rhs1(f, shape):
     data = f["extra/rhs1"][:]
     divided_data = divide_1d_array(data, 2)
     reshaped_data = {
-        "extra/rhs1/0": convert_1d_to_2d(divided_data[0], (512, 511)),
-        "extra/rhs1/1": convert_1d_to_2d(divided_data[1], (511, 512)),
+        "extra/rhs1/0": convert_1d_to_2d(divided_data[0], (shape, shape - 1)),
+        "extra/rhs1/1": convert_1d_to_2d(divided_data[1], (shape - 1, shape)),
     }
 
     return reshaped_data
@@ -103,13 +103,16 @@ def __main__():
     parser.add_argument(
         "base_dir", help="Base directory containing the 'result' folder"
     )
+    parser.add_argument(
+        "--shape", type=int, default = 512, help="Shape of the reshaped data"
+    )
     args = parser.parse_args()
 
     os.chdir(args.base_dir)
     h5_files = [os.path.basename(file) for file in glob.glob("0*00.h5")]
     for h5_file in h5_files:
         print(f"Processing {h5_file}...")
-        reshape_h5(h5_file)
+        reshape_h5(h5_file, args.shape)
 
 
 if __name__ == "__main__":
