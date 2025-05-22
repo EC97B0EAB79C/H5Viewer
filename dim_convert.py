@@ -104,14 +104,16 @@ def __main__():
         "base_dir", help="Base directory containing the 'result' folder"
     )
     parser.add_argument(
-        "--shape", type=int, default = 512, help="Shape of the reshaped data"
+        "--shape", type=int, default=512, help="Shape of the reshaped data"
     )
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode")
     args = parser.parse_args()
 
     os.chdir(args.base_dir)
     h5_files = [os.path.basename(file) for file in glob.glob("0*00.h5")]
     for h5_file in h5_files:
-        print(f"Processing {h5_file}...")
+        if args.debug:
+            print(f"Debug mode: Processing {h5_file} with shape {args.shape}")
         reshape_h5(h5_file, args.shape)
 
 
